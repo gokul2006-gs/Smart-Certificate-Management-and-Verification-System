@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { BadgeCheck, Download, FileUp, Files, Upload } from "lucide-react";
 import Layout, { PageHeader } from "../components/Layout";
-import api, { getCsrfToken } from "../services/api";
+import api, { formatApiError, getCsrfToken } from "../services/api";
+
+const TEMPLATE_BATCH_SIZE = 5;
 
 function UploadCertificate() {
   const [students, setStudents] = useState([]);
@@ -95,25 +97,56 @@ if (fileInput) {
   const handleTemplateGenerate = async (event) => {
     event.preventDefault();
     if (!templateFile) return;
-
-    const formData = new FormData();
-    formData.append("template_file", templateFile);
-    formData.append("issue_date", issueDate);
+    if (!students.length) {
+      setTemplateMessage("Upload students first before generating certificates.");
+      return;
+    }
 
     setTemplateLoading(true);
     setTemplateMessage("");
     setTemplateResult(null);
 
+    const aggregated = {
+      created: [],
+      skipped: [],
+      created_count: 0,
+      skipped_count: 0,
+    };
+
     try {
       await getCsrfToken();
-      const response = await api.post("/certificates/generate-from-template/", formData);
-      setTemplateResult(response.data);
+
+      const studentIds = students.map((student) => student.student_id);
+      for (let index = 0; index < studentIds.length; index += TEMPLATE_BATCH_SIZE) {
+        const batch = studentIds.slice(index, index + TEMPLATE_BATCH_SIZE);
+        const formData = new FormData();
+        formData.append("template_file", templateFile);
+        formData.append("issue_date", issueDate);
+        batch.forEach((studentId) => formData.append("student_ids", studentId));
+
+        setTemplateMessage(`Generating certificates ${Math.min(index + batch.length, studentIds.length)} of ${studentIds.length}...`);
+
+        const response = await api.post("/certificates/generate-from-template/", formData);
+        aggregated.created.push(...(response.data.created || []));
+        aggregated.skipped.push(...(response.data.skipped || []));
+        aggregated.created_count += response.data.created_count || 0;
+        aggregated.skipped_count += response.data.skipped_count || 0;
+      }
+
+      setTemplateResult(aggregated);
       setTemplateMessage(
-        `${response.data.created_count} certificates generated, ${response.data.skipped_count} skipped`
+        `${aggregated.created_count} certificates generated, ${aggregated.skipped_count} skipped`
       );
       setTemplateFile(null);
     } catch (err) {
-      setTemplateMessage(err.response?.data?.error || "Template generation failed");
+      if (aggregated.created_count > 0) {
+        setTemplateResult(aggregated);
+        setTemplateMessage(
+          `${aggregated.created_count} generated before failure. ${formatApiError(err, "Template generation failed")}`
+        );
+      } else {
+        setTemplateMessage(formatApiError(err, "Template generation failed"));
+      }
     } finally {
       setTemplateLoading(false);
     }

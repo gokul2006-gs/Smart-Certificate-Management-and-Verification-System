@@ -83,6 +83,12 @@ def _load_font(size, bold=False):
 
     candidates = [
         "arialbd.ttf" if bold else "arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        if bold
+        else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+        if bold
+        else "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
         "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
         "C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf",
     ]
@@ -410,37 +416,46 @@ def generate_certificates_from_template(request):
         )
 
     issue_date = request.data.get("issue_date") or timezone.localdate().isoformat()
-    student_ids = request.data.getlist("student_ids")
+    student_ids = [value.strip() for value in request.data.getlist("student_ids") if value.strip()]
     students = Student.objects.select_related("course").order_by("student_id")
     if student_ids:
         students = students.filter(student_id__in=student_ids)
 
+    if not students.exists():
+        return Response({"error": "No students found to generate certificates for"}, status=status.HTTP_400_BAD_REQUEST)
+
     created = []
     skipped = []
 
-    for student in students:
-        try:
-            template_file.seek(0)
-            generated_file = _generated_certificate_file(student, template_file, issue_date)
-            certificate, verification_url = _create_certificate(
-                student,
-                generated_file,
-                generated_file.name,
-            )
-            created.append({
-                "student_id": student.student_id,
-                "student_name": student.name,
-                "certificate": _absolute_media_url(request, certificate.certificate_file),
-                "download_url": _download_url(request, student.student_id),
-                "qr": _absolute_media_url(request, certificate.qr_code),
-                "verification_url": verification_url,
-            })
-        except Exception as exc:
-            skipped.append({
-                "student_id": student.student_id,
-                "student_name": student.name,
-                "reason": str(exc),
-            })
+    try:
+        for student in students:
+            try:
+                template_file.seek(0)
+                generated_file = _generated_certificate_file(student, template_file, issue_date)
+                certificate, verification_url = _create_certificate(
+                    student,
+                    generated_file,
+                    generated_file.name,
+                )
+                created.append({
+                    "student_id": student.student_id,
+                    "student_name": student.name,
+                    "certificate": _absolute_media_url(request, certificate.certificate_file),
+                    "download_url": _download_url(request, student.student_id),
+                    "qr": _absolute_media_url(request, certificate.qr_code),
+                    "verification_url": verification_url,
+                })
+            except Exception as exc:
+                skipped.append({
+                    "student_id": student.student_id,
+                    "student_name": student.name,
+                    "reason": str(exc),
+                })
+    except Exception as exc:
+        return Response(
+            {"error": f"Certificate generation failed: {exc}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     return Response({
         "message": "Template certificates generated",

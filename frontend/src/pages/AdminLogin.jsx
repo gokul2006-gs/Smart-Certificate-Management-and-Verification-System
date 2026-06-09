@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
-import api, { checkSession, getCsrfToken } from "../services/api";
+import api, { checkSession, formatApiError, getCsrfToken } from "../services/api";
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -25,14 +25,14 @@ function AdminLogin() {
       const session = await checkSession();
       if (!session.authenticated || session.role !== "admin") {
         throw new Error(
-          `Session could not be established. Use ${window.location.origin} in the browser and keep the backend running on port 8000.`
+          "Session could not be established. Try logging in again."
         );
       }
 
       localStorage.setItem("role", session.role);
       navigate("/admin-dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Unable to sign in");
+      setError(formatApiError(err, "Unable to sign in"));
     } finally {
       setLoading(false);
     }

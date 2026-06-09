@@ -72,6 +72,11 @@ def login_view(request):
     if role == "admin":
         username = str(request.data.get("username", "")).strip()
         password = str(request.data.get("password", "")).strip()
+        if not username or not password:
+            return Response(
+                {"error": "Username and password are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         user = authenticate(
             request,
             username=username,
@@ -98,15 +103,20 @@ def login_view(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    student_id = request.data.get("student_id")
-    password = request.data.get("password")
+    student_id = str(request.data.get("student_id", "")).strip()
+    password = str(request.data.get("password", "")).strip()
+    if not student_id or not password:
+        return Response(
+            {"error": "Student ID and password are required"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         student = Student.objects.get(student_id=student_id)
     except Student.DoesNotExist:
         return Response(
             {"error": "Student not found"},
-            status=status.HTTP_404_NOT_FOUND,
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     if student.password != password:

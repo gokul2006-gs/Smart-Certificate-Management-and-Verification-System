@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { GraduationCap, LogIn } from "lucide-react";
-import api, { checkSession, getCsrfToken } from "../services/api";
+import api, { checkSession, formatApiError, getCsrfToken } from "../services/api";
 
 function StudentLogin() {
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ function StudentLogin() {
       const session = await checkSession();
       if (!session.authenticated || session.role !== "student") {
         throw new Error(
-          `Session could not be established. Use ${window.location.origin} in the browser and keep the backend running on port 8000.`
+          "Session could not be established. Try logging in again."
         );
       }
 
@@ -34,7 +34,7 @@ function StudentLogin() {
       localStorage.setItem("student_id", session.student_id);
       navigate("/student-dashboard");
     } catch (err) {
-      setError(err.response?.data?.error || err.message || "Login failed");
+      setError(formatApiError(err, "Login failed"));
     } finally {
       setLoading(false);
     }
