@@ -477,3 +477,15 @@ def admin_login_logs(request):
         for log in logs
     ]
     return Response(data)
+from django.conf import settings
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
+@api_view(["GET"])
+def test_env(request):
+    return Response({
+        "DB_NAME": settings.DATABASES["default"]["NAME"],
+        "DB_USER": settings.DATABASES["default"]["USER"],
+        "DB_HOST": settings.DATABASES["default"]["HOST"],
+        "DB_PORT": settings.DATABASES["default"]["PORT"],
+    })
