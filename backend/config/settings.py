@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+import dj_database_url
+import pymysql
+
+pymysql.install_as_MySQLdb()
 
 load_dotenv()
 
@@ -22,13 +26,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-5t+ay93i3m6#6fxv=@zdlq$!xb2u*=$jenpaivzf*ip4-@@8(p'
+# SECURITY WARNING: keep the secret key used in production secret.
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "django-insecure-dev-only-change-this-on-render",
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("ALLOWED_HOSTS", ".onrender.com,localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 def _detect_lan_ip():
     import socket
@@ -41,7 +51,7 @@ def _detect_lan_ip():
         return None
 
 
-FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://127.0.0.1:5173")
+FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "http://127.0.0.1:5173").rstrip("/")
 _LAN_IP = _detect_lan_ip()
 _LAN_FRONTEND_ORIGINS = [f"http://{_LAN_IP}:5173"] if _LAN_IP else []
 
@@ -54,8 +64,8 @@ CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
 
 CSRF_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_SAMESITE = "Lax"
-CSRF_COOKIE_SECURE = False
-SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_HTTPONLY = False
 SESSION_COOKIE_PATH = "/"
 SESSION_COOKIE_DOMAIN = None
@@ -73,6 +83,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'rest_framework',
     'accounts',
     'courses',
@@ -82,7 +93,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    # 'config.middleware.SimpleCorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -96,6 +107,9 @@ FRONTEND_ALLOWED_ORIGINS = list(dict.fromkeys([
     FRONTEND_BASE_URL,
     *_LAN_FRONTEND_ORIGINS,
 ]))
+
+CORS_ALLOWED_ORIGINS = FRONTEND_ALLOWED_ORIGINS
+CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -126,18 +140,26 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-import os
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('DB_NAME'),
+            'USER': os.environ.get('DB_USER'),
+            'PASSWORD': os.environ.get('DB_PASSWORD'),
+            'HOST': os.environ.get('DB_HOST'),
+            'PORT': os.environ.get('DB_PORT', '3306'),
+        }
+    }
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -178,7 +200,4 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-SECRET_KEY = os.environ.get("SECRET_KEY")
-
-DEBUG = os.environ.get("DEBUG", "False") == "True"
 
