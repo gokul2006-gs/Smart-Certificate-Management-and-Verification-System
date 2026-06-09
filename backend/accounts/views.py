@@ -165,19 +165,22 @@ def dashboard_stats(request):
 
 @api_view(["GET"])
 def database_connection(request):
-    if not _admin_required(request):
-        return Response({"error": "Admin access required"}, status=status.HTTP_403_FORBIDDEN)
-
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-            cursor.fetchone()
-        return Response({"status": "connected", "message": "Database connection is healthy."})
-    except Exception as exc:
-        return Response(
-            {"status": "error", "message": str(exc)},
-            status=status.HTTP_503_SERVICE_UNAVAILABLE,
-        )
+            result = cursor.fetchone()
+
+        return Response({
+            "status": "connected",
+            "result": result
+        })
+
+    except Exception as e:
+        return Response({
+            "status": "error",
+            "error": str(e),
+            "database": settings.DATABASES["default"]
+        }, status=500)
 
 
 @api_view(["POST"])
