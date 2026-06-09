@@ -483,9 +483,4 @@ from rest_framework.decorators import api_view
 
 @api_view(["GET"])
 def test_env(request):
-    return Response({
-        "DB_NAME": settings.DATABASES["default"]["NAME"],
-        "DB_USER": settings.DATABASES["default"]["USER"],
-        "DB_HOST": settings.DATABASES["default"]["HOST"],
-        "DB_PORT": settings.DATABASES["default"]["PORT"],
-    })
+    return Response({"test": "working"})
