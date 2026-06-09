@@ -123,14 +123,16 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
+import os
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'TS3',
-        'USER': 'root',
-        'PASSWORD': 'Gokul@0406',
-        'HOST': 'localhost',
-        'PORT': '3306',
+        'NAME': os.environ.get('railway'),
+        'USER': os.environ.get('root'),
+        'PASSWORD': os.environ.get('KLSLsfbFUwTRkXJsPVdgczOQyEJVCqCh'),
+        'HOST': os.environ.get('switchback.proxy.rlwy.net'),
+        'PORT': os.environ.get('18997'),
     }
 }
 
@@ -170,3 +172,7 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
 STATIC_ROOT = BASE_DIR / "staticfiles"
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+DEBUG = os.environ.get("DEBUG", "False") == "True"
+
