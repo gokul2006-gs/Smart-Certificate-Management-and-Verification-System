@@ -11,9 +11,9 @@ function resolveApiBaseUrl() {
 }
 
 const api = axios.create({
-  baseURL: resolveApiBaseUrl(),
-  withCredentials: true,
+  baseURL: "https://smart-certificate-management-and.onrender.com/api/",
 });
+
 
 api.interceptors.response.use(
   (response) => response,
