@@ -1,5 +1,6 @@
 from django.contrib.auth import authenticate, login, logout
 from django.http import JsonResponse
+from django.conf import settings
 from django.db import connection
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
@@ -179,20 +180,27 @@ def dashboard_stats(request):
 @api_view(["GET"])
 def database_connection(request):
     try:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-            result = cursor.fetchone()
+        db_settings = settings.DATABASES["default"]
+        if db_settings.get("ENGINE") == "django_mongodb_backend":
+            ping_result = connection.database.command("ping")
+            result = ping_result.get("ok")
+        else:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
 
         return Response({
             "status": "connected",
-            "result": result
+            "message": "MongoDB connection is healthy.",
+            "database": db_settings.get("NAME"),
+            "result": result,
         })
 
     except Exception as e:
         return Response({
             "status": "error",
-            "error": str(e),
-            "database": settings.DATABASES["default"]
+            "message": str(e),
+            "database": settings.DATABASES["default"].get("NAME"),
         }, status=500)
 
 
@@ -490,9 +498,3 @@ def admin_login_logs(request):
         for log in logs
     ]
     return Response(data)
-from django.conf import settings
-from rest_framework.response import Response
-from rest_framework.decorators import api_view
-
-def test_env(request):
-    return JsonResponse({"test": "working"})

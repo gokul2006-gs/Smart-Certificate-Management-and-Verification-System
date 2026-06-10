@@ -13,15 +13,12 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-import dj_database_url
-import pymysql
-
-pymysql.install_as_MySQLdb()
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DEFAULT_AUTO_FIELD = "django_mongodb_backend.fields.ObjectIdAutoField"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -55,6 +52,7 @@ FRONTEND_BASE_URL = os.environ.get(
     "FRONTEND_BASE_URL",
     "https://smart-certificate-management-and.onrender.com",
 ).rstrip("/")
+VERCEL_FRONTEND_ORIGIN = "https://smart-certificate-management-and-verifica-gokul2006-gs-projects.vercel.app"
 EXTRA_FRONTEND_ORIGINS = [
     origin.strip().rstrip("/")
     for origin in os.environ.get("FRONTEND_ALLOWED_ORIGINS", "").split(",")
@@ -67,6 +65,7 @@ CSRF_TRUSTED_ORIGINS = list(dict.fromkeys([
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://smart-certificate-management-and.onrender.com",
+    VERCEL_FRONTEND_ORIGIN,
     "https://*.vercel.app",
     FRONTEND_BASE_URL,
     *EXTRA_FRONTEND_ORIGINS,
@@ -88,18 +87,27 @@ SESSION_COOKIE_AGE = 1209600
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'corsheaders',
-    'rest_framework',
-    'accounts',
-    'courses',
-    'certificates.apps.CertificatesConfig',
+    "django_mongodb_backend",
+    "config.mongo_apps.MongoAdminConfig",
+    "config.mongo_apps.MongoAuthConfig",
+    "config.mongo_apps.MongoContentTypesConfig",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "corsheaders",
+    "rest_framework",
+    "accounts.apps.AccountsConfig",
+    "courses.apps.CoursesConfig",
+    "certificates.apps.CertificatesConfig",
 ]
+
+MIGRATION_MODULES = {
+    "admin": "mongo_migrations.admin",
+    "auth": "mongo_migrations.auth",
+    "contenttypes": "mongo_migrations.contenttypes",
+}
+
+DATABASE_ROUTERS = ["django_mongodb_backend.routers.MongoRouter"]
 
 MIDDLEWARE = [
     'config.middleware.CorsExceptionMiddleware',
@@ -116,6 +124,7 @@ MIDDLEWARE = [
 FRONTEND_ALLOWED_ORIGINS = list(dict.fromkeys([
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    VERCEL_FRONTEND_ORIGIN,
     FRONTEND_BASE_URL,
     *EXTRA_FRONTEND_ORIGINS,
     *_LAN_FRONTEND_ORIGINS,
@@ -169,26 +178,31 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
+MONGODB_URI = os.environ.get("MONGODB_URI") or os.environ.get("DATABASE_URL", "")
+MONGODB_NAME = os.environ.get("MONGODB_NAME", "smart_certificate_db")
 
-if DATABASE_URL:
+if MONGODB_URI:
     DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-        )
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('DB_NAME'),
-            'USER': os.environ.get('DB_USER'),
-            'PASSWORD': os.environ.get('DB_PASSWORD'),
-            'HOST': os.environ.get('DB_HOST'),
-            'PORT': os.environ.get('DB_PORT', '3306'),
+        "default": {
+            "ENGINE": "django_mongodb_backend",
+            "HOST": MONGODB_URI,
+            "NAME": MONGODB_NAME,
         }
     }
+else:
+    _mongo_db = {
+        "ENGINE": "django_mongodb_backend",
+        "HOST": os.environ.get("MONGODB_HOST", "mongodb://localhost:27017"),
+        "NAME": MONGODB_NAME,
+        "PORT": int(os.environ.get("MONGODB_PORT", "27017")),
+    }
+    _mongo_user = os.environ.get("MONGODB_USER", "").strip()
+    _mongo_password = os.environ.get("MONGODB_PASSWORD", "").strip()
+    if _mongo_user:
+        _mongo_db["USER"] = _mongo_user
+    if _mongo_password:
+        _mongo_db["PASSWORD"] = _mongo_password
+    DATABASES = {"default": _mongo_db}
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',

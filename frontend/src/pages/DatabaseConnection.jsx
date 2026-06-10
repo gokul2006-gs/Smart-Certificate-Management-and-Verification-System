@@ -43,7 +43,7 @@ function DatabaseConnection() {
           <div>
             <h3 className="text-lg font-semibold text-slate-950">Test database connectivity</h3>
             <p className="text-sm text-slate-500">
-              Use this page to confirm that the backend can reach the configured MySQL database.
+              Use this page to confirm that the backend can reach the configured MongoDB database.
             </p>
           </div>
 

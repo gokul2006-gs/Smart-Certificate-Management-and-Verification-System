@@ -53,7 +53,7 @@ def generate_for_students(template_file, issue_date, students, request):
 
 def process_generation_job_batch(job, request, batch_size=JOB_BATCH_SIZE):
     with transaction.atomic():
-        job = CertificateGenerationJob.objects.select_for_update().get(pk=job.pk)
+        job = CertificateGenerationJob.objects.get(pk=job.pk)
 
         if job.status in {
             CertificateGenerationJob.STATUS_COMPLETED,

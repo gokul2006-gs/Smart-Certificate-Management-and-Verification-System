@@ -16,16 +16,14 @@ services:
       - key: ALLOWED_HOSTS
         value: ".onrender.com,smart-certificate-management-and.onrender.com"
       - key: FRONTEND_BASE_URL
+        value: "https://smart-certificate-management-and-verifica-gokul2006-gs-projects.vercel.app"
+      - key: FRONTEND_ALLOWED_ORIGINS
+        value: "https://smart-certificate-management-and-verifica-gokul2006-gs-projects.vercel.app"
+      - key: MONGODB_URI
         sync: false
+      - key: MONGODB_NAME
+        value: "smart_certificate_db"
       - key: ADMIN_USERNAME
         sync: false
       - key: ADMIN_PASSWORD
         sync: false
-      - key: DATABASE_URL
-        fromDatabase:
-          name: smart-certificate-db
-          property: connectionString
-
-databases:
-  - name: smart-certificate-db
-    plan: free

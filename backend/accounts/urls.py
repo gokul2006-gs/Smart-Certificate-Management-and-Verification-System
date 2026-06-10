@@ -13,7 +13,6 @@ from .views import (
     students,
     dashboard_stats,
     database_connection,
-    test_env
 )
 
 urlpatterns = [
@@ -55,6 +54,5 @@ urlpatterns = [
     ),
 
     path('admin-login-logs/', admin_login_logs),
-    path("test-env/", test_env),
 
 ]

@@ -69,4 +69,10 @@ class CorsExceptionMiddleware:
         if origin and self._origin_allowed(origin):
             response["Access-Control-Allow-Origin"] = origin
             response["Access-Control-Allow-Credentials"] = "true"
+            response["Access-Control-Allow-Headers"] = (
+                "accept, accept-encoding, authorization, content-type, origin, "
+                "user-agent, x-csrftoken, x-requested-with"
+            )
+            response["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            response["Vary"] = "Origin"
         return response
